@@ -12,19 +12,20 @@ def changeBrightness(imgPath):
     newImg = Image.fromarray(newImgMatrix.astype('uint8'))
 
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_changeBrightness"+"."+fileExtension
+    path = "./output/"+fileName + "_changeBrightness"+"."+fileExtension
     newImg.save(path)
 
 def changeContrast(imgPath):
     img = Image.open(imgPath)
     contrastFactor = float(input("Nhập giá trị tăng độ tương phản: "))
     img = Image.open(imgPath)
+    contrastFactor = (259*(contrastFactor+255))//(255*(259-contrastFactor))
     imgMatrix = np.array(img)
-    newImgMatrix = contrastFactor*imgMatrix
+    newImgMatrix = contrastFactor*(imgMatrix.astype(float)-128)+128
     newImgMatrix = np.clip(newImgMatrix,0,255)
-    newImg = Image.fromarray(newImgMatrix.astype('uint8'))
+    newImg = Image.fromarray(newImgMatrix.astype(np.uint8))
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_changeContrast"+"."+fileExtension
+    path ="./output/"+fileName + "_changeContrast"+"."+fileExtension
     newImg.save(path)
 
 
@@ -39,7 +40,7 @@ def convertIntoGray(imgPath):
             avg = int(round((r+b+g)/3))
             grayImg.putpixel((i, j), avg)
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_gray"+"."+fileExtension
+    path = "./output/"+fileName + "_gray"+"."+fileExtension
     grayImg.save(path)
 
 def convertIntoSepia(imgPath):
@@ -57,7 +58,7 @@ def convertIntoSepia(imgPath):
             newB = min(255,newB)
             sepiaImg.putpixel((i, j), (newR,newG,newB))
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_sepia"+"."+fileExtension
+    path ="./output/"+ fileName + "_sepia"+"."+fileExtension
     sepiaImg.save(path)
 
 def vericalFlipImage(imgPath):
@@ -66,7 +67,7 @@ def vericalFlipImage(imgPath):
     verImgMatrix = np.fliplr(imgMatrix)
     verImg = Image.fromarray(verImgMatrix)
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_verticalFlip"+"."+fileExtension
+    path = "./output/"+fileName + "_verticalFlip"+"."+fileExtension
     verImg.save(path)
 
 def horizonalFlipImage(imgPath):
@@ -76,27 +77,33 @@ def horizonalFlipImage(imgPath):
     horImg = Image.fromarray(horImgMatrix)
     
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_horizonal"+"."+fileExtension
+    path ="./output/"+ fileName + "_horizonal"+"."+fileExtension
     horImg.save(path)
+
 
 def blurImage(imgPath):
     img = Image.open(imgPath)
-    imgMatrix = np.array(img)
+    imgMatrix = np.array(img, dtype=np.uint8)
     width, height = img.size
-    kernel = np.ones((3, 3)) / 9 
-    kernel = np.flipud(np.fliplr(kernel)).astype('float')  # Convert kernel to float
-    blurImg = Image.new('RGB', (width, height))  # Create a new RGB image
-    x = kernel.shape[0] // 2
-    y = kernel.shape[1] // 2
-    for i in range(x, width - x):
-        for j in range(y, height - y):
-            region = imgMatrix[i - x:i + x + 1, j - y:j + y + 1]
-            newPixel = np.sum(region * kernel)
-            newPixel = int(np.clip(newPixel, 0, 255))
-            blurImg.putpixel((i, j), (newPixel, newPixel, newPixel))  # Set pixel value as RGB tuple
+    kernel = np.ones((3, 3))// 9 
+    padding =3//2
 
+    blurImg = Image.new('RGB', (width, height))
+    blurImgMatrix = np.array(blurImg)
+    for i in range(3):
+        paddedImg = np.pad(imgMatrix[:,:,i], padding, mode='constant')
+        for j in range(imgMatrix.shape[0]):
+            for k in range(imgMatrix.shape[1]):
+                rowStart = j
+                rowEnd = j + 3
+                colStart = k
+                colEnd = k + 3
+                neighbor = paddedImg[rowStart:rowEnd, colStart:colEnd]
+                blurImgMatrix[j, k, i] = np.sum(neighbor * kernel)
+
+    blurImg =   Image.fromarray(blurImgMatrix.astype(np.uint8))
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_blur"+"."+fileExtension
+    path = "./output/"+fileName + "_blur"+"."+fileExtension
     blurImg.save(path)
 
 
@@ -105,18 +112,19 @@ def cutBySize(imgPath):
     
     img = Image.open(imgPath)
     width, height = img.size
-    size = int((height * size) //100)
-    cuttedImg = Image.new('RGB', (size, size))  # Define size of the cutted image
-    xPadding = (width- size) // 2
-    yPadding = (height - size) // 2
-    for i in range(xPadding, xPadding + size):
-        for j in range(yPadding, yPadding + size):
-            pixel = img.getpixel((i, j))  # Get pixel value from the original image
-            cuttedImg.putpixel((i - xPadding, j - yPadding), pixel)  # Set pixel value in the cutted image
+    newheight = int((height * size) //100)
+    newwidth = int((width * size) //100)
+    cuttedImg = Image.new('RGB', (newwidth, newheight))
+    xPadding = (width- newwidth) // 2
+    yPadding = (height - newwidth) // 2
+    for i in range(xPadding, xPadding + newwidth):
+        for j in range(yPadding, yPadding + newheight):
+            pixel = img.getpixel((i, j))
+            cuttedImg.putpixel((i - xPadding, j - yPadding), pixel)
 
 
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_cutted"+"."+fileExtension
+    path = "./output/"+fileName + "_cutted"+"."+fileExtension
     cuttedImg.save(path)
 
 
@@ -141,7 +149,7 @@ def roundCut(imgPath):
             else:
                 roundImg.putpixel((i - xPadding, j - yPadding),  (0, 0, 0) )
     fileName, fileExtension = imgPath.split(".")
-    path = fileName + "_round"+"."+fileExtension
+    path = "./output/"+fileName + "_round"+"."+fileExtension
     roundImg.save(path)
 
     
